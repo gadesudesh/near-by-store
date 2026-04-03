@@ -24,10 +24,12 @@ const CustomerDashboard = () => {
   const fetchNearbyShops = async () => {
     try {
       setLoading(true);
-      const res = await API.get(`/shops/nearby?lat=${location.lat}&lng=${location.lng}&radius=${radius}`);
+      const res = await API.get(
+        `/shops/nearby?lat=${location.lat}&lng=${location.lng}&radius=${radius}`
+      );
       setShops(res.data.shops);
-    } catch (error) {
-      console.error('Error fetching shops:', error);
+    } catch (err) {
+      console.error(err);
     } finally {
       setLoading(false);
     }
@@ -35,17 +37,36 @@ const CustomerDashboard = () => {
 
   const handleSearch = (e) => {
     e.preventDefault();
-    if (searchQuery.trim()) {
+    if (searchQuery.trim())
       navigate(`/customer/search?q=${encodeURIComponent(searchQuery)}`);
-    }
   };
 
   const sortedShops = [...shops].sort((a, b) => {
     if (sortBy === 'distance') return (a.distance || 0) - (b.distance || 0);
     if (sortBy === 'rating') return (b.averageRating || 0) - (a.averageRating || 0);
-    if (sortBy === 'name') return a.shopName.localeCompare(b.shopName);
-    return 0;
+    return a.shopName.localeCompare(b.shopName);
   });
+
+  const getCategoryEmoji = (category) => {
+    const map = {
+      home_appliances: '🏠',
+      hardware: '🔧',
+      electronics: '📱',
+      sports: '🏏',
+      fitness: '💪',
+      accessories: '⌚',
+      stationery: '📝',
+      personal_care: '✨',
+      grocery: '🛒',
+      bakery: '🍰',
+      pharmacy: '💊',
+      clothing: '👕',
+      restaurant: '🍽️',
+      general: '🏪',
+      other: '🏪',
+    };
+    return map[category] || '🏪';
+  };
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
@@ -58,13 +79,16 @@ const CustomerDashboard = () => {
 
         <form onSubmit={handleSearch} className="mt-6 flex gap-3">
           <div className="relative flex-1">
-            <FiSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+            <FiSearch
+              className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"
+              size={20}
+            />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="input-field pl-12 pr-4 py-3.5 text-lg"
-              placeholder="Search for products, e.g. 'milk', 'rice', 'charger'..."
+              className="input-field pl-12 py-3.5 text-lg"
+              placeholder="Search products, e.g. 'mixer', 'laptop', 'cricket bat'..."
             />
           </div>
           <button type="submit" className="btn-primary px-8">
@@ -72,9 +96,18 @@ const CustomerDashboard = () => {
           </button>
         </form>
 
-        {/* Quick search tags */}
         <div className="flex flex-wrap gap-2 mt-4">
-          {['Milk', 'Rice', 'Bread', 'Samosa', 'Charger', 'Earbuds'].map((tag) => (
+          {[
+            'Refrigerator',
+            'Laptop',
+            'Cricket Bat',
+            'Headphones',
+            'Mixer Grinder',
+            'Yoga Mat',
+            'Watch',
+            'Trimmer',
+            'Drill',
+          ].map((tag) => (
             <button
               key={tag}
               onClick={() => navigate(`/customer/search?q=${tag}`)}
@@ -86,12 +119,11 @@ const CustomerDashboard = () => {
         </div>
       </div>
 
-      {/* Map */}
+      {/* Map Section */}
       <div className="mb-8">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
-            <FiMapPin className="text-primary-600" />
-            Shops Near You
+            <FiMapPin className="text-primary-600" /> Shops Near You
           </h2>
           <button
             onClick={() => setShowFilters(!showFilters)}
@@ -101,12 +133,15 @@ const CustomerDashboard = () => {
           </button>
         </div>
 
-        {/* Filters */}
         {showFilters && (
           <div className="card p-4 mb-4 flex flex-wrap gap-4 items-center">
             <div className="flex items-center gap-2">
-              <label className="text-sm font-medium text-gray-600">Sort by:</label>
-              <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} className="input-field py-2 px-3 text-sm w-auto">
+              <label className="text-sm font-medium text-gray-600">Sort:</label>
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value)}
+                className="input-field py-2 px-3 text-sm w-auto"
+              >
                 <option value="distance">Distance</option>
                 <option value="rating">Rating</option>
                 <option value="name">Name</option>
@@ -114,7 +149,11 @@ const CustomerDashboard = () => {
             </div>
             <div className="flex items-center gap-2">
               <label className="text-sm font-medium text-gray-600">Radius:</label>
-              <select value={radius} onChange={(e) => setRadius(Number(e.target.value))} className="input-field py-2 px-3 text-sm w-auto">
+              <select
+                value={radius}
+                onChange={(e) => setRadius(Number(e.target.value))}
+                className="input-field py-2 px-3 text-sm w-auto"
+              >
                 <option value={2}>2 km</option>
                 <option value={5}>5 km</option>
                 <option value={10}>10 km</option>
@@ -125,17 +164,25 @@ const CustomerDashboard = () => {
           </div>
         )}
 
+        {/* MAP WITH ROUTING ENABLED */}
         {location && (
           <MapView
             userLocation={location}
             shops={shops}
-            onShopClick={(id) => navigate(`/customer/shop/${id}`)}
-            height="350px"
+            enableRouting={true}
+            height="400px"
           />
+        )}
+
+        {/* Routing instructions */}
+        {location && shops.length > 0 && (
+          <p className="text-xs text-gray-400 mt-2 text-center">
+            💡 Click any shop marker on the map to see driving directions
+          </p>
         )}
       </div>
 
-      {/* Shop list */}
+      {/* Shop List */}
       {loading ? (
         <LoadingSpinner text="Finding nearby shops..." />
       ) : sortedShops.length === 0 ? (
@@ -150,29 +197,57 @@ const CustomerDashboard = () => {
             <div
               key={shop._id}
               onClick={() => navigate(`/customer/shop/${shop._id}`)}
-              className="card p-6 cursor-pointer hover:border-primary-200 group"
+              className="card overflow-hidden cursor-pointer hover:border-primary-200 group"
             >
-              <div className="flex items-start justify-between mb-3">
-                <div className="w-12 h-12 bg-primary-50 rounded-xl flex items-center justify-center text-2xl flex-shrink-0 group-hover:scale-110 transition-transform">
-                  {shop.category === 'grocery' ? '🛒' : shop.category === 'bakery' ? '🍰' : shop.category === 'electronics' ? '📱' : shop.category === 'pharmacy' ? '💊' : '🏪'}
+              {/* Shop Image */}
+              {shop.image && (
+                <div className="w-full h-40 overflow-hidden">
+                  <img
+                    src={shop.image}
+                    alt={shop.shopName}
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                  />
                 </div>
-                {shop.distance !== undefined && (
-                  <span className="flex items-center gap-1 text-sm text-primary-600 font-medium bg-primary-50 px-2.5 py-1 rounded-full">
-                    <FiNavigation size={12} /> {shop.distance} km
-                  </span>
+              )}
+
+              <div className="p-5">
+                <div className="flex items-start justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    {!shop.image && (
+                      <div className="w-10 h-10 bg-primary-50 rounded-lg flex items-center justify-center text-lg flex-shrink-0">
+                        {getCategoryEmoji(shop.category)}
+                      </div>
+                    )}
+                    <h3 className="text-lg font-bold text-gray-900 group-hover:text-primary-600 transition-colors">
+                      {shop.shopName}
+                    </h3>
+                  </div>
+                  {shop.distance !== undefined && (
+                    <span className="flex items-center gap-1 text-sm text-primary-600 font-medium bg-primary-50 px-2.5 py-1 rounded-full flex-shrink-0 ml-2">
+                      <FiNavigation size={12} />
+                      {shop.distance} km
+                    </span>
+                  )}
+                </div>
+
+                <p className="text-sm text-gray-500 mb-2 line-clamp-1">{shop.address}</p>
+
+                {shop.description && (
+                  <p className="text-xs text-gray-400 mb-3 line-clamp-2">
+                    {shop.description}
+                  </p>
                 )}
-              </div>
 
-              <h3 className="text-lg font-bold text-gray-900 mb-1 group-hover:text-primary-600 transition-colors">
-                {shop.shopName}
-              </h3>
-              <p className="text-sm text-gray-500 mb-3 line-clamp-1">{shop.address}</p>
-
-              <div className="flex items-center justify-between">
-                <StarRating rating={shop.averageRating || 0} count={shop.reviewCount} size={14} />
-                <span className="text-xs text-gray-400 capitalize bg-gray-50 px-2 py-1 rounded-full">
-                  {shop.category}
-                </span>
+                <div className="flex items-center justify-between">
+                  <StarRating
+                    rating={shop.averageRating || 0}
+                    count={shop.reviewCount}
+                    size={14}
+                  />
+                  <span className="text-xs text-gray-400 capitalize bg-gray-50 px-2 py-1 rounded-full">
+                    {shop.category?.replace('_', ' ')}
+                  </span>
+                </div>
               </div>
             </div>
           ))}

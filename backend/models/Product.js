@@ -7,43 +7,30 @@ const productSchema = new mongoose.Schema({
   category: {
     type: String, required: true,
     enum: [
-      // Home Appliances
       'refrigerators', 'washing_machines', 'air_conditioners', 'microwave_ovens',
       'water_purifiers', 'kitchen_appliances', 'vacuum_cleaners', 'water_heaters',
       'electric_fans', 'cooktops_stoves', 'televisions',
-      // Hardware
       'computer_hardware', 'hand_tools', 'power_tools', 'locks_security',
       'pipes_fittings', 'electrical_hardware', 'paint_coatings', 'fasteners',
-      // Electronics
-      'smartphones', 'tablets', 'smartwatches', 'chargers_powerbanks',
-      'laptops', 'desktops', 'computer_accessories', 'printers',
-      'led_lcd_tvs', 'sound_systems', 'projectors',
-      'headphones_earbuds', 'speakers', 'cameras', 'drones_action_cameras',
-      'routers_modems', 'smart_home_devices',
-      'trimmers_shavers', 'hair_dryers', 'electric_toothbrushes',
-      // Sports
-      'cricket', 'football', 'badminton', 'tennis', 'table_tennis',
-      'hockey', 'athletics_running', 'gym_workout', 'swimming',
-      'cycling', 'indoor_games', 'yoga_fitness',
-      // Personal Accessories
-      'watches', 'sunglasses', 'wallets_belts', 'jewelry',
-      'backpacks_bags', 'luggage', 'travel_accessories',
-      // Tech Accessories
-      'phone_cases', 'cables_adapters',
-      // Personal Care
+      'smartphones', 'tablets', 'smartwatches', 'chargers_powerbanks', 'laptops',
+      'desktops', 'computer_accessories', 'printers', 'led_lcd_tvs', 'sound_systems',
+      'projectors', 'headphones_earbuds', 'speakers', 'cameras', 'drones_action_cameras',
+      'routers_modems', 'smart_home_devices', 'trimmers_shavers', 'hair_dryers',
+      'electric_toothbrushes',
+      'cricket', 'football', 'badminton', 'tennis', 'table_tennis', 'hockey',
+      'athletics_running', 'gym_workout', 'swimming', 'cycling', 'indoor_games', 'yoga_fitness',
+      'watches', 'sunglasses', 'wallets_belts', 'jewelry', 'backpacks_bags', 'luggage',
+      'travel_accessories', 'phone_cases', 'cables_adapters',
       'haircare_accessories', 'deodorants_perfumes',
-      // Stationery
       'pens_notebooks', 'water_bottles_flasks', 'eyewear',
-      // Fitness & Outdoor
       'fitness_bands', 'gym_bags_gloves', 'yoga_mats',
-      // Legacy categories
       'fruits', 'vegetables', 'dairy', 'bakery', 'beverages', 'snacks',
-      'electronics', 'clothing', 'household', 'personal_care', 'medicine',
-      'stationery', 'other'
+      'electronics', 'clothing', 'household', 'personal_care', 'medicine', 'stationery', 'other'
     ],
     default: 'other'
   },
   brand: { type: String, default: '', maxlength: 50 },
+  image: { type: String, default: '' },
   price: { type: Number, required: true, min: 0 },
   stock: { type: Number, required: true, min: 0, default: 0 },
   unit: { type: String, default: 'piece', enum: ['piece', 'kg', 'g', 'l', 'ml', 'dozen', 'pack', 'set', 'pair'] },

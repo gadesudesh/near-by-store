@@ -6,13 +6,13 @@ const shopSchema = new mongoose.Schema({
   description: { type: String, maxlength: 500, default: '' },
   address: { type: String, required: true },
   phone: { type: String, default: '' },
+  image: { type: String, default: '' },
   category: {
     type: String,
     enum: [
-      'home_appliances', 'hardware', 'electronics', 'sports',
-      'accessories', 'stationery', 'personal_care', 'fitness',
-      'grocery', 'clothing', 'pharmacy', 'bakery', 'restaurant',
-      'general', 'other'
+      'home_appliances', 'hardware', 'electronics', 'sports', 'accessories',
+      'stationery', 'personal_care', 'fitness',
+      'grocery', 'clothing', 'pharmacy', 'bakery', 'restaurant', 'general', 'other'
     ],
     default: 'general'
   },
