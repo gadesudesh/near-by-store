@@ -60,19 +60,39 @@ exports.getMyProducts = async (req, res) => {
   }
 };
 
+// @desc    Search products — returns all shops selling that product
+// @route   GET /api/products/search?q=xxx&lat=xx&lng=xx&radius=xx&sort=price&groupByShop=true
 exports.searchProducts = async (req, res) => {
   try {
-    const { q, lat, lng, radius = 10, sort = 'price', category, minPrice, maxPrice } = req.query;
-    if (!q) return res.status(400).json({ success: false, message: 'Search query required' });
+    const {
+      q,
+      lat,
+      lng,
+      radius = 10,
+      sort = 'price',
+      category,
+      minPrice,
+      maxPrice,
+      groupByShop,
+    } = req.query;
 
+    if (!q) {
+      return res
+        .status(400)
+        .json({ success: false, message: 'Search query required' });
+    }
+
+    // Build product filter
     const productFilter = {
       isAvailable: true,
       $or: [
         { productName: { $regex: q, $options: 'i' } },
         { category: { $regex: q, $options: 'i' } },
-        { description: { $regex: q, $options: 'i' } }
-      ]
+        { description: { $regex: q, $options: 'i' } },
+        { brand: { $regex: q, $options: 'i' } },
+      ],
     };
+
     if (category) productFilter.category = category;
     if (minPrice || maxPrice) {
       productFilter.price = {};
@@ -80,19 +100,24 @@ exports.searchProducts = async (req, res) => {
       if (maxPrice) productFilter.price.$lte = parseFloat(maxPrice);
     }
 
+    // If location provided, filter nearby shops first
     if (lat && lng) {
       const nearbyShops = await Shop.find({
         isActive: true,
         location: {
           $near: {
-            $geometry: { type: 'Point', coordinates: [parseFloat(lng), parseFloat(lat)] },
-            $maxDistance: parseFloat(radius) * 1000
-          }
-        }
+            $geometry: {
+              type: 'Point',
+              coordinates: [parseFloat(lng), parseFloat(lat)],
+            },
+            $maxDistance: parseFloat(radius) * 1000,
+          },
+        },
       });
-      productFilter.shop = { $in: nearbyShops.map(s => s._id) };
+      productFilter.shop = { $in: nearbyShops.map((s) => s._id) };
     }
 
+    // Sort options
     let sortOption = {};
     if (sort === 'price') sortOption = { price: 1 };
     else if (sort === '-price') sortOption = { price: -1 };
@@ -100,28 +125,106 @@ exports.searchProducts = async (req, res) => {
     else sortOption = { price: 1 };
 
     const products = await Product.find(productFilter)
-      .populate({ path: 'shop', select: 'shopName address location category owner', populate: { path: 'owner', select: 'name' } })
+      .populate({
+        path: 'shop',
+        select: 'shopName address location category owner image phone',
+        populate: { path: 'owner', select: 'name' },
+      })
       .sort(sortOption);
 
-    const results = products.map(product => {
-      const prod = product.toObject();
-      if (lat && lng && prod.shop && prod.shop.location) {
-        prod.distance = parseFloat(getDistance(
-          parseFloat(lat), parseFloat(lng),
-          prod.shop.location.coordinates[1], prod.shop.location.coordinates[0]
-        ).toFixed(2));
-      }
-      return prod;
+    // Compute distance & attach shop rating
+    const Review = require('../models/Review');
+
+    const results = await Promise.all(
+      products.map(async (product) => {
+        const prod = product.toObject();
+
+        // Compute distance
+        if (lat && lng && prod.shop && prod.shop.location) {
+          prod.distance = parseFloat(
+            getDistance(
+              parseFloat(lat),
+              parseFloat(lng),
+              prod.shop.location.coordinates[1],
+              prod.shop.location.coordinates[0]
+            ).toFixed(2)
+          );
+        }
+
+        // Attach shop rating
+        if (prod.shop) {
+          const reviews = await Review.find({ shop: prod.shop._id });
+          prod.shop.averageRating =
+            reviews.length > 0
+              ? parseFloat(
+                  (
+                    reviews.reduce((sum, r) => sum + r.rating, 0) /
+                    reviews.length
+                  ).toFixed(1)
+                )
+              : 0;
+          prod.shop.reviewCount = reviews.length;
+        }
+
+        return prod;
+      })
+    );
+
+    // Sort by distance if requested
+    if (sort === 'distance') {
+      results.sort((a, b) => (a.distance || 999) - (b.distance || 999));
+    }
+
+    // GROUP BY SHOP VIEW
+    if (groupByShop === 'true') {
+      const shopMap = {};
+
+      results.forEach((product) => {
+        if (!product.shop) return;
+        const shopId = product.shop._id.toString();
+
+        if (!shopMap[shopId]) {
+          shopMap[shopId] = {
+            shop: product.shop,
+            distance: product.distance,
+            products: [],
+          };
+        }
+        shopMap[shopId].products.push({
+          _id: product._id,
+          productName: product.productName,
+          description: product.description,
+          category: product.category,
+          brand: product.brand,
+          price: product.price,
+          stock: product.stock,
+          unit: product.unit,
+          image: product.image,
+        });
+      });
+
+      // Sort shops by distance
+      const grouped = Object.values(shopMap).sort(
+        (a, b) => (a.distance || 999) - (b.distance || 999)
+      );
+
+      return res.json({
+        success: true,
+        count: results.length,
+        shopCount: grouped.length,
+        grouped,
+      });
+    }
+
+    res.json({
+      success: true,
+      count: results.length,
+      products: results,
     });
-
-    if (sort === 'distance') results.sort((a, b) => (a.distance || 999) - (b.distance || 999));
-
-    res.json({ success: true, count: results.length, products: results });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
 };
-
 exports.getProduct = async (req, res) => {
   try {
     const product = await Product.findById(req.params.id).populate('shop');
