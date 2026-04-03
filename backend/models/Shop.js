@@ -8,7 +8,12 @@ const shopSchema = new mongoose.Schema({
   phone: { type: String, default: '' },
   category: {
     type: String,
-    enum: ['grocery', 'electronics', 'clothing', 'pharmacy', 'bakery', 'restaurant', 'hardware', 'stationery', 'general', 'other'],
+    enum: [
+      'home_appliances', 'hardware', 'electronics', 'sports',
+      'accessories', 'stationery', 'personal_care', 'fitness',
+      'grocery', 'clothing', 'pharmacy', 'bakery', 'restaurant',
+      'general', 'other'
+    ],
     default: 'general'
   },
   location: {
