@@ -63,8 +63,8 @@ const MapView = ({
   enableRouting = false,
   activeRouteCoords = [], // externally provided route (from DirectionsModal)
 }) => {
-  const mapCenter = center || userLocation || { lat: 28.6280, lng: 77.2190 };
-
+  const mapCenter = center || userLocation || { lat: 19.0760, lng: 72.8777 };
+  
   // Internal routing state (for click-to-route on dashboard map)
   const [internalRoute, setInternalRoute] = useState([]);
   const [internalRouteInfo, setInternalRouteInfo] = useState(null);

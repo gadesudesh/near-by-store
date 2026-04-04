@@ -18,48 +18,37 @@ export const AuthProvider = ({ children }) => {
     }
     setLoading(false);
 
-    // Get user location
+    // Get user location — default to MUMBAI if denied
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
-        (position) => {
-          setLocation({
-            lat: position.coords.latitude,
-            lng: position.coords.longitude,
-          });
-        },
-        () => {
-          // Default: New Delhi
-          setLocation({ lat: 28.6139, lng: 77.2090 });
-        }
+        (pos) => setLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+        () => setLocation({ lat: 19.0760, lng: 72.8777 }) // Mumbai default
       );
     } else {
-      setLocation({ lat: 28.6139, lng: 77.2090 });
+      setLocation({ lat: 19.0760, lng: 72.8777 }); // Mumbai default
     }
   }, []);
 
   const login = async (email, password) => {
     const res = await API.post('/auth/login', { email, password });
-    const { token: newToken, user: newUser } = res.data;
-    setToken(newToken);
-    setUser(newUser);
-    localStorage.setItem('nbs_token', newToken);
-    localStorage.setItem('nbs_user', JSON.stringify(newUser));
-    return newUser;
+    const { token: t, user: u } = res.data;
+    setToken(t); setUser(u);
+    localStorage.setItem('nbs_token', t);
+    localStorage.setItem('nbs_user', JSON.stringify(u));
+    return u;
   };
 
   const register = async (data) => {
     const res = await API.post('/auth/register', data);
-    const { token: newToken, user: newUser } = res.data;
-    setToken(newToken);
-    setUser(newUser);
-    localStorage.setItem('nbs_token', newToken);
-    localStorage.setItem('nbs_user', JSON.stringify(newUser));
-    return newUser;
+    const { token: t, user: u } = res.data;
+    setToken(t); setUser(u);
+    localStorage.setItem('nbs_token', t);
+    localStorage.setItem('nbs_user', JSON.stringify(u));
+    return u;
   };
 
   const logout = () => {
-    setToken(null);
-    setUser(null);
+    setToken(null); setUser(null);
     localStorage.removeItem('nbs_token');
     localStorage.removeItem('nbs_user');
   };
