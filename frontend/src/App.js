@@ -16,6 +16,8 @@ import RetailerDashboard from './pages/retailer/RetailerDashboard';
 import RetailerProducts from './pages/retailer/RetailerProducts';
 import RetailerInventory from './pages/retailer/RetailerInventory';
 import RetailerAnalytics from './pages/retailer/RetailerAnalytics';
+import AdminDashboard from './pages/admin/AdminDashboard';
+
 
 function AppRoutes() {
   const { user } = useAuth();
@@ -36,6 +38,11 @@ function AppRoutes() {
       <Route path="/retailer/products" element={<ProtectedRoute role="retailer"><RetailerProducts /></ProtectedRoute>} />
       <Route path="/retailer/inventory" element={<ProtectedRoute role="retailer"><RetailerInventory /></ProtectedRoute>} />
       <Route path="/retailer/analytics" element={<ProtectedRoute role="retailer"><RetailerAnalytics /></ProtectedRoute>} />
+
+      {/* Admin Routes */}
+<Route path="/admin/dashboard" element={
+  <ProtectedRoute role="admin"><AdminDashboard /></ProtectedRoute>
+} />
 
       {/* 404 */}
       <Route path="*" element={

@@ -6,7 +6,11 @@ const userSchema = new mongoose.Schema({
   name: { type: String, required: true, trim: true, maxlength: 50 },
   email: { type: String, required: true, unique: true, lowercase: true },
   password: { type: String, required: true, minlength: 6, select: false },
-  role: { type: String, enum: ['customer', 'retailer'], default: 'customer' },
+  role: {
+    type: String,
+    enum: ['customer', 'retailer', 'admin'],
+    default: 'customer'
+  },
   phone: { type: String, maxlength: 15 }
 }, { timestamps: true });
 
@@ -22,7 +26,11 @@ userSchema.methods.matchPassword = async function(enteredPassword) {
 };
 
 userSchema.methods.getSignedJwtToken = function() {
-  return jwt.sign({ id: this._id, role: this.role }, process.env.JWT_SECRET, { expiresIn: process.env.JWT_EXPIRE });
+  return jwt.sign(
+    { id: this._id, role: this.role },
+    process.env.JWT_SECRET,
+    { expiresIn: process.env.JWT_EXPIRE }
+  );
 };
 
 module.exports = mongoose.model('User', userSchema);

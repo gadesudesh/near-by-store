@@ -3,16 +3,38 @@ const Review = require('../models/Review');
 
 exports.createShop = async (req, res) => {
   try {
-    const { shopName, description, address, phone, category, latitude, longitude } = req.body;
+    const { shopName, description, address, phone, category, latitude, longitude, image,
+            gstNumber, panNumber, shopLicense, ownerIdProof } = req.body;
+
     const existingShop = await Shop.findOne({ owner: req.user.id });
     if (existingShop) {
       return res.status(400).json({ success: false, message: 'You already have a shop' });
     }
+
     const shop = await Shop.create({
-      owner: req.user.id, shopName, description, address, phone, category,
-      location: { type: 'Point', coordinates: [parseFloat(longitude), parseFloat(latitude)] }
+      owner: req.user.id,
+      shopName,
+      description,
+      address,
+      phone,
+      category,
+      image,
+      gstNumber: gstNumber || '',
+      panNumber: panNumber || '',
+      shopLicense: shopLicense || '',
+      ownerIdProof: ownerIdProof || '',
+      verificationStatus: 'pending', // Starts as pending!
+      location: {
+        type: 'Point',
+        coordinates: [parseFloat(longitude), parseFloat(latitude)]
+      }
     });
-    res.status(201).json({ success: true, shop });
+
+    res.status(201).json({
+      success: true,
+      shop,
+      message: 'Shop created! It will be visible to customers after admin verification.'
+    });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
@@ -50,11 +72,15 @@ exports.updateShop = async (req, res) => {
 exports.getNearbyShops = async (req, res) => {
   try {
     const { lat, lng, radius = 10 } = req.query;
+
     if (!lat || !lng) {
       return res.status(400).json({ success: false, message: 'Provide latitude and longitude' });
     }
+
+    // ONLY show verified & active shops to customers
     const shops = await Shop.find({
       isActive: true,
+      verificationStatus: 'verified',
       location: {
         $near: {
           $geometry: { type: 'Point', coordinates: [parseFloat(lng), parseFloat(lat)] },
@@ -65,17 +91,24 @@ exports.getNearbyShops = async (req, res) => {
 
     const shopsWithRating = await Promise.all(
       shops.map(async (shop) => {
+        const Review = require('../models/Review');
         const reviews = await Review.find({ shop: shop._id });
         const avgRating = reviews.length > 0
-          ? (reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length).toFixed(1) : 0;
-        const distance = getDistance(parseFloat(lat), parseFloat(lng),
-          shop.location.coordinates[1], shop.location.coordinates[0]);
+          ? (reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length).toFixed(1)
+          : 0;
+        const distance = getDistance(
+          parseFloat(lat), parseFloat(lng),
+          shop.location.coordinates[1], shop.location.coordinates[0]
+        );
         return {
-          ...shop.toObject(), averageRating: parseFloat(avgRating),
-          reviewCount: reviews.length, distance: parseFloat(distance.toFixed(2))
+          ...shop.toObject(),
+          averageRating: parseFloat(avgRating),
+          reviewCount: reviews.length,
+          distance: parseFloat(distance.toFixed(2))
         };
       })
     );
+
     res.json({ success: true, count: shopsWithRating.length, shops: shopsWithRating });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -102,8 +135,76 @@ exports.getShopById = async (req, res) => {
 
 exports.getAllShops = async (req, res) => {
   try {
-    const shops = await Shop.find({ isActive: true }).populate('owner', 'name');
+    const shops = await Shop.find({
+      isActive: true,
+      verificationStatus: 'verified'
+    }).populate('owner', 'name');
+
     res.json({ success: true, count: shops.length, shops });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// @desc    Search shops by name
+// @route   GET /api/shops/search?q=xxx&lat=xx&lng=xx
+exports.searchShops = async (req, res) => {
+  try {
+    const { q, lat, lng, radius = 50 } = req.query;
+
+    if (!q) {
+      return res.status(400).json({ success: false, message: 'Search query required' });
+    }
+
+    let filter = {
+      isActive: true,
+      verificationStatus: 'verified',
+      $or: [
+        { shopName: { $regex: q, $options: 'i' } },
+        { description: { $regex: q, $options: 'i' } },
+        { address: { $regex: q, $options: 'i' } },
+        { category: { $regex: q, $options: 'i' } }
+      ]
+    };
+
+    // If location provided, filter nearby
+    if (lat && lng) {
+      filter.location = {
+        $near: {
+          $geometry: { type: 'Point', coordinates: [parseFloat(lng), parseFloat(lat)] },
+          $maxDistance: parseFloat(radius) * 1000
+        }
+      };
+    }
+
+    const shops = await Shop.find(filter).populate('owner', 'name');
+
+    const Review = require('../models/Review');
+    const results = await Promise.all(
+      shops.map(async (shop) => {
+        const reviews = await Review.find({ shop: shop._id });
+        const avgRating = reviews.length > 0
+          ? (reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length).toFixed(1)
+          : 0;
+
+        let distance = null;
+        if (lat && lng) {
+          distance = parseFloat(getDistance(
+            parseFloat(lat), parseFloat(lng),
+            shop.location.coordinates[1], shop.location.coordinates[0]
+          ).toFixed(2));
+        }
+
+        return {
+          ...shop.toObject(),
+          averageRating: parseFloat(avgRating),
+          reviewCount: reviews.length,
+          distance
+        };
+      })
+    );
+
+    res.json({ success: true, count: results.length, shops: results });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }

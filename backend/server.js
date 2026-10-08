@@ -8,29 +8,41 @@ connectDB();
 
 const app = express();
 
+// --- Middleware ---
 app.use(cors());
 app.use(express.json());
+app.use(express.urlencoded({ extended: true })); // ✅ Handle form data too
 
+// --- Health Check ---
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', message: 'Near By Store API is running' });
 });
 
+// --- Routes ---
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/shops', require('./routes/shops'));
 app.use('/api/products', require('./routes/products'));
 app.use('/api/reviews', require('./routes/reviews'));
 app.use('/api/routes', require('./routes/routeRoutes'));
+app.use('/api/admin', require('./routes/admin'));
 
-app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.status(500).json({ success: false, message: 'Internal Server Error' });
+// --- 404 Handler (MUST come before error handler) ---
+app.use((req, res, next) => {                          // ✅ Added `next`
+  res.status(404).json({ success: false, message: 'Route not found' });
 });
 
-app.use((req, res) => {
-  res.status(404).json({ success: false, message: 'Route not found' });
+// --- Global Error Handler ---
+app.use((err, req, res, next) => {
+  console.error(err.stack);
+  const statusCode = err.statusCode || 500;            // ✅ Dynamic status codes
+  res.status(statusCode).json({
+    success: false,
+    message: err.message || 'Internal Server Error',
+    ...(process.env.NODE_ENV === 'development' && { stack: err.stack }) // ✅ Stack trace in dev only
+  });
 });
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+  console.log(`Server running in ${process.env.NODE_ENV || 'development'} mode on port ${PORT}`);
 });

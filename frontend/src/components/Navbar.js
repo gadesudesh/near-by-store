@@ -13,7 +13,11 @@ const Navbar = () => {
     navigate('/');
   };
 
-  const dashboard = user?.role === 'retailer' ? '/retailer/dashboard' : '/customer/dashboard';
+  const dashboard = user?.role === 'admin'
+  ? '/admin/dashboard'
+  : user?.role === 'retailer'
+    ? '/retailer/dashboard'
+    : '/customer/dashboard';
 
   return (
     <nav className="bg-white border-b border-gray-100 sticky top-0 z-50">

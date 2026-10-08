@@ -82,40 +82,69 @@ exports.searchProducts = async (req, res) => {
         .json({ success: false, message: 'Search query required' });
     }
 
+    // Inside searchProducts function, replace the productFilter block:
+
+const productFilter = {
+  isAvailable: true,
+  $or: [
+    { productName: { $regex: q, $options: 'i' } },
+    { category: { $regex: q, $options: 'i' } },
+    { description: { $regex: q, $options: 'i' } },
+    { brand: { $regex: q, $options: 'i' } }
+  ]
+};
+
+// ALSO search by shop name — find shops matching the query
+const matchingShops = await Shop.find({
+  isActive: true,
+  verificationStatus: 'verified',
+  $or: [
+    { shopName: { $regex: q, $options: 'i' } },
+    { category: { $regex: q, $options: 'i' } }
+  ]
+});
+
+if (matchingShops.length > 0) {
+  // Include products from shops whose NAME matches the search
+  productFilter.$or.push(
+    { shop: { $in: matchingShops.map(s => s._id) } }
+  );
+}
+
     // Build product filter
-    const productFilter = {
-      isAvailable: true,
-      $or: [
-        { productName: { $regex: q, $options: 'i' } },
-        { category: { $regex: q, $options: 'i' } },
-        { description: { $regex: q, $options: 'i' } },
-        { brand: { $regex: q, $options: 'i' } },
-      ],
-    };
+    // const productFilter = {
+    //   isAvailable: true,
+    //   $or: [
+    //     { productName: { $regex: q, $options: 'i' } },
+    //     { category: { $regex: q, $options: 'i' } },
+    //     { description: { $regex: q, $options: 'i' } },
+    //     { brand: { $regex: q, $options: 'i' } },
+    //   ],
+    // };
 
-    if (category) productFilter.category = category;
-    if (minPrice || maxPrice) {
-      productFilter.price = {};
-      if (minPrice) productFilter.price.$gte = parseFloat(minPrice);
-      if (maxPrice) productFilter.price.$lte = parseFloat(maxPrice);
-    }
+    // if (category) productFilter.category = category;
+    // if (minPrice || maxPrice) {
+    //   productFilter.price = {};
+    //   if (minPrice) productFilter.price.$gte = parseFloat(minPrice);
+    //   if (maxPrice) productFilter.price.$lte = parseFloat(maxPrice);
+    // }
 
-    // If location provided, filter nearby shops first
-    if (lat && lng) {
-      const nearbyShops = await Shop.find({
-        isActive: true,
-        location: {
-          $near: {
-            $geometry: {
-              type: 'Point',
-              coordinates: [parseFloat(lng), parseFloat(lat)],
-            },
-            $maxDistance: parseFloat(radius) * 1000,
-          },
-        },
-      });
-      productFilter.shop = { $in: nearbyShops.map((s) => s._id) };
-    }
+    // // If location provided, filter nearby shops first
+    // if (lat && lng) {
+    //   const nearbyShops = await Shop.find({
+    //     isActive: true,
+    //     location: {
+    //       $near: {
+    //         $geometry: {
+    //           type: 'Point',
+    //           coordinates: [parseFloat(lng), parseFloat(lat)],
+    //         },
+    //         $maxDistance: parseFloat(radius) * 1000,
+    //       },
+    //     },
+    //   });
+    //   productFilter.shop = { $in: nearbyShops.map((s) => s._id) };
+    // }
 
     // Sort options
     let sortOption = {};
