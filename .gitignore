@@ -1,16 +1,21 @@
-# Dependencies (friends will install these themselves)
+# Dependencies
 node_modules/
 
-# Environment variables (contains secrets)
+# Environment variables (NEVER commit real .env)
 .env
+*.env.local
 
-# Build files
+# Build outputs
 frontend/build/
+frontend/dist/
 
-# OS files
+# Capacitor / Android (contains local keystore, sdk paths)
+frontend/android/
+frontend/ios/
+frontend/.capacitor/
+
+# OS / IDE
 .DS_Store
 Thumbs.db
-
-# IDE files
 .vscode/
 .idea/

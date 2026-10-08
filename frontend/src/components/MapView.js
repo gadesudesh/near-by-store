@@ -93,8 +93,9 @@ const MapView = ({
         const shopLat = shop.location.coordinates[1];
         const shopLng = shop.location.coordinates[0];
 
+        const apiBase = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
         const res = await fetch(
-          `http://localhost:5000/api/routes/single?fromLat=${userLocation.lat}&fromLng=${userLocation.lng}&toLat=${shopLat}&toLng=${shopLng}&mode=drive`
+          `${apiBase}/routes/single?fromLat=${userLocation.lat}&fromLng=${userLocation.lng}&toLat=${shopLat}&toLng=${shopLng}&mode=drive`
         );
         const data = await res.json();
 

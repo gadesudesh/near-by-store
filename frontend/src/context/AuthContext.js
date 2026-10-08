@@ -3,6 +3,47 @@ import API from '../api/axios';
 
 const AuthContext = createContext(null);
 
+// Safely import Capacitor Geolocation — falls back to browser API if not available
+let CapacitorGeo = null;
+try {
+  // eslint-disable-next-line
+  const { Geolocation } = require('@capacitor/geolocation');
+  CapacitorGeo = Geolocation;
+} catch (e) {
+  // Running in browser without Capacitor native layer — that's fine
+}
+
+const MUMBAI_DEFAULT = { lat: 19.0760, lng: 72.8777 };
+
+const getUserLocation = () =>
+  new Promise((resolve) => {
+    const fallback = () => resolve(MUMBAI_DEFAULT);
+
+    if (CapacitorGeo) {
+      // Native Capacitor path (Android / iOS)
+      CapacitorGeo.requestPermissions()
+        .then(() =>
+          CapacitorGeo.getCurrentPosition({
+            enableHighAccuracy: true,
+            timeout: 10000,
+          })
+        )
+        .then((pos) =>
+          resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude })
+        )
+        .catch(fallback);
+    } else if (navigator.geolocation) {
+      // Browser / PWA path
+      navigator.geolocation.getCurrentPosition(
+        (pos) => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+        fallback,
+        { enableHighAccuracy: true, timeout: 10000 }
+      );
+    } else {
+      fallback();
+    }
+  });
+
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [token, setToken] = useState(null);
@@ -10,6 +51,7 @@ export const AuthProvider = ({ children }) => {
   const [location, setLocation] = useState(null);
 
   useEffect(() => {
+    // Restore session from localStorage
     const savedToken = localStorage.getItem('nbs_token');
     const savedUser = localStorage.getItem('nbs_user');
     if (savedToken && savedUser) {
@@ -18,21 +60,15 @@ export const AuthProvider = ({ children }) => {
     }
     setLoading(false);
 
-    // Get user location — default to MUMBAI if denied
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (pos) => setLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-        () => setLocation({ lat: 19.0760, lng: 72.8777 }) // Mumbai default
-      );
-    } else {
-      setLocation({ lat: 19.0760, lng: 72.8777 }); // Mumbai default
-    }
+    // Get location using Capacitor (native) or browser API
+    getUserLocation().then(setLocation);
   }, []);
 
   const login = async (email, password) => {
     const res = await API.post('/auth/login', { email, password });
     const { token: t, user: u } = res.data;
-    setToken(t); setUser(u);
+    setToken(t);
+    setUser(u);
     localStorage.setItem('nbs_token', t);
     localStorage.setItem('nbs_user', JSON.stringify(u));
     return u;
@@ -41,14 +77,16 @@ export const AuthProvider = ({ children }) => {
   const register = async (data) => {
     const res = await API.post('/auth/register', data);
     const { token: t, user: u } = res.data;
-    setToken(t); setUser(u);
+    setToken(t);
+    setUser(u);
     localStorage.setItem('nbs_token', t);
     localStorage.setItem('nbs_user', JSON.stringify(u));
     return u;
   };
 
   const logout = () => {
-    setToken(null); setUser(null);
+    setToken(null);
+    setUser(null);
     localStorage.removeItem('nbs_token');
     localStorage.removeItem('nbs_user');
   };
